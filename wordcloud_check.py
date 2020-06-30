@@ -9,6 +9,8 @@ import parmap
 from threading import Thread
 from crawler import dao
 from crawler import data_util
+from queue import Queue
+import concurrent.futures
 
 ##ydns dao 객체 생성
 dao_ydns = dao.DAO(host='103.55.190.32', port=3306, user='wordcloud', password='word6244!@', db='crawl', charset= 'utf8mb4')
@@ -42,19 +44,27 @@ elif len(row_gr)>0:
         #task 를 thread 처리 하기 위해 input_data 로 만들어줍니다.
         input_data = dt.data_process()
 
+
         #dt.to_crawl 입력받은 데이터를 크롤링 엔진으로 전달
-        ts = [Thread(target=dt.to_crawl, args=(input_list,))\
-                     for input_list in input_data]
+
+        #threading 생성
+        threads = [None] * len(input_data)
+        results = [None] * len(input_data)
 
         #모든 스레드를 각각 시작한다.
-        for t in ts:
-            t.start()
-
-        #모든 스레드를 join 한다.
-        for t in ts:
-
-            t.join()
+        for index, input_list in enumerate(input_data):
+            threads[index] = Thread(target=dt.to_crawl, args=(input_list, results, index))
+            threads[index].start()
+        #쓰레드 종료
+        for i in range(len(threads)):
+            threads[i].join()
         #워드클라우드 생성
+
+        #쓰레드 결과 값(TASK ID ) 워드클라우드 생성을 위해 전달
+        for index,input_list in enumerate(input_data):
+            input_list.append(results[index])
+        print('final_input_data',input_data)
+
         dt.to_venndiagram_wordcloud(input_data)
 
         #마무으리

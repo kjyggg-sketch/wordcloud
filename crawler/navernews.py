@@ -135,6 +135,7 @@ def crawl(keyword, startDate, endDate, nCrawl, comment="navernews_test") :
         if end : break
         pageNo += 1
 
+    return task_id
 
 def get_keyhex(keyword) :
     keyint = keyword.encode("UTF-8")

@@ -12,7 +12,7 @@ class WordCloudRenderer:
         self.base_dir = dirname(dirname(__file__))
         self.mask_dir = '/img/wordcloud'
 
-        self.font_name = 'NanumSquareR.ttf'
+        self.font_dir = '/fonts/NanumSquareR.ttf'
 
         self.maskPic = np.array(Image.open(self.base_dir+self.mask_dir+'/mask.png'))
         self.palette= pal
@@ -26,7 +26,7 @@ class WordCloudRenderer:
 
         # cmap = LinearSegmentedColormap.from_list("mycmap", self.colors)
 
-        wordcloud = WordCloud(font_path='{}/{}'.format(self.base_dir,self.font_name),\
+        wordcloud = WordCloud(font_path='{}/{}'.format(self.base_dir,self.font_dir),\
                                   background_color="rgba(255, 255, 255, 0)", mode="RGBA",\
                                   max_font_size=120, \
                                   min_font_size=18, \

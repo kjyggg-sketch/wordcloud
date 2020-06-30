@@ -15,7 +15,7 @@ import os
 
 class TextAnalyzer:
 
-    def __init__(self, keyword,channel, startDate, endDate, nlpEngine, nUrl, id, category):
+    def __init__(self, keyword,channel, startDate, endDate, nlpEngine, nUrl, task_id, category, id):
 
         self.keyword = keyword
 
@@ -26,6 +26,7 @@ class TextAnalyzer:
         self.nlpEngine = nlpEngine
 
         self.nUrl = nUrl
+        self.task_id = task_id
         self.id = id
         self.category = category
         if nlpEngine == "Okt":
@@ -51,8 +52,8 @@ class TextAnalyzer:
         # 192.168.0.105
         # 103.55.190.32 wordcloud ap
         curs = conn.cursor(pymysql.cursors.DictCursor)
-        sql = "select * from %s where (keyword=\'%s\') and channel=\'%s\' and post_date>=\'%s\' and post_date<=\'%s\' limit %d" % \
-              (table,self.keyword, self.channel ,self.startDate, self.endDate, self.nUrl)
+        sql = "select * from %s where (keyword=\'%s\') and channel=\'%s\' and post_date>=\'%s\' and post_date<=\'%s\' and task_id=\'%s\' limit %d" % \
+              (table,self.keyword, self.channel ,self.startDate, self.endDate, self.task_id ,self.nUrl)
         print('sql=', sql)
         curs.execute(sql)
 

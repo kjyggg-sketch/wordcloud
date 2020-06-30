@@ -111,7 +111,7 @@ def crawl(keyword, startDate, endDate, nCrawl, comment="naverblog") :
                 end = True
 
         if end : break
-
+    return task_id
 
 def get_keyhex(keyword) :
     keyint = keyword.encode("UTF-8")
