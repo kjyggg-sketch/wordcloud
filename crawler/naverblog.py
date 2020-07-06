@@ -11,16 +11,17 @@ from crawler.crawler_utils import cleanse
 
 # custom_header을 통해 아닌 것 처럼 위장하기
 
+proxy = []
 CUSTOM_HEADER = {
     'accept': 'application/json, text/plain, */*',
-    'accept-encoding': 'gzip, deflate, br',
+    'accept-encoding': 'gzip, deflate, br, utf-8',
     'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
     'cookie': 'NNB=26JKENAB5VNFY; npic=LW1n/Y7lr1485twRJiDAu7IQNma7Byg1+eD1dujBnEarfw1Jj92XPcGCQrmTmIkDCA==; _ga=GA1.2.785938604.1550973896; nx_ssl=2; BMR=; _naver_usersession_=ldZTind9DyvToDWTHUQkNw==; page_uid=UfWJIwprvOsssOBmEzdssssstul-404192; JSESSIONID=FE270C9B4B35C84D83479B52E6020831.jvm1',
     'referer': 'https://section.blog.naver.com/Search/Post.nhn?pageNo=1&rangeType=ALL&orderBy=sim&keyword=',#+heyhex
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36'}
 
 
-def crawl(keyword, startDate, endDate, nCrawl, comment="naverblog") :
+def crawl(keyword, startDate, endDate, nCrawl, proxy ,comment="naverblog") :
     #init task
     db = Sql('dalmaden')
     channel = 'naverblog'
@@ -39,7 +40,8 @@ def crawl(keyword, startDate, endDate, nCrawl, comment="naverblog") :
         list_url = "https://section.blog.naver.com/ajax/SearchList.nhn?countPerPage=7&currentPage=%d&endDate=%s" % (
             pageNo, endDate)+ "&keyword=%s&orderBy=sim&startDate=%s&type=post" % (keyhex, startDate)
         print('crawling - get list',list_url)
-        req = requests.get(list_url, headers=custom_header)  # custom_header를 사용하지 않으면 접근 불가
+
+        req = requests.get(list_url, headers=custom_header, proxies=proxy)  # custom_header를 사용하지 않으면 접근 불가
         if req.status_code == requests.codes.ok:
             r = req.text[6:]
             data_all = json.loads(r)
@@ -76,7 +78,7 @@ def crawl(keyword, startDate, endDate, nCrawl, comment="naverblog") :
                     post_date = datetime.fromtimestamp(data['addDate'] / 1e3).strftime("%Y-%m-%d")
                     title = data['noTagTitle']
                     author = f"{data['nickName']}({data['blogName']})"
-                    soup = BeautifulSoup(get_html(url), 'html.parser')
+                    soup = BeautifulSoup(get_html(url, proxy), 'html.parser')
                     text = get_text(soup)
                     db.insert('cdata',
                               task_id = task_id,
@@ -125,12 +127,12 @@ def get_realUrl(idStr, noStr):
         idStr, noStr)
     return urlStr
 
-def get_html(url):
+def get_html(url, proxy):
     #####엑셀관련코드추가#####
     err = 0
     while err < 5 :
         try :
-            r = requests.get(url)
+            r = requests.get(url, headers=CUSTOM_HEADER,proxies=proxy)
             if r.status_code == requests.codes.ok:
                 t = r.text
                 t = re.sub('<p', '\n<p', t, 0, re.I | re.S)

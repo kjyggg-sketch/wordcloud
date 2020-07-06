@@ -20,7 +20,7 @@ CUSTOM_HEADER = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36'}
 
 
-def crawl(keyword, startDate, endDate, nCrawl, comment="navernews_test") :
+def crawl(keyword, startDate, endDate, nCrawl, proxy=None,comment="navernews_test") :
     #init task
     db = Sql('dalmaden')
     channel = 'navernews'
@@ -43,7 +43,7 @@ def crawl(keyword, startDate, endDate, nCrawl, comment="navernews_test") :
         list_url = f"https://search.naver.com/search.naver?where=news&query={url_keyword}&sort=0&ds={url_startDate}&de={url_endDate}&nso=so%3Ar%2Cp%3Afrom{url_from}to{url_to}%2Ca%3A&start={url_startNum}"
         custom_header['referer'] = list_url
         print('crawling - get list', list_url)
-        req = requests.get(list_url, headers=custom_header)  # custom_header를 사용하지 않으면 접근 불가
+        req = requests.get(list_url, headers=custom_header, proxies=proxy)  # custom_header를 사용하지 않으면 접근 불가
 
         if req.status_code == requests.codes.ok:
             data_list = req.text
@@ -79,7 +79,7 @@ def crawl(keyword, startDate, endDate, nCrawl, comment="navernews_test") :
                     try :
                         print('crawling',num,url)
                         custom_header['referer'] = url
-                        req = requests.get(url, headers=custom_header)  # custom_header를 사용하지 않으면 접근 불가
+                        req = requests.get(url, headers=custom_header, proxies = proxy)  # custom_header를 사용하지 않으면 접근 불가
                         ban_counter+=1
                         bs = BeautifulSoup(req.content, 'html.parser')
 

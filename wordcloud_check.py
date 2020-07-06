@@ -9,11 +9,9 @@ import parmap
 from threading import Thread
 from crawler import dao
 from crawler import data_util
-from queue import Queue
-import concurrent.futures
 
 ##ydns dao 객체 생성
-dao_ydns = dao.DAO(host='103.55.190.32', port=3306, user='wordcloud', password='word6244!@', db='crawl', charset= 'utf8mb4')
+dao_ydns = dao.DAO(host='localhost', port=3306, user='wordcloud', password='word6244!@', db='crawl', charset= 'utf8mb4')
 
 #작업중인 요청 체크
 row_gi = dao_ydns.select_gi()
@@ -36,7 +34,7 @@ elif len(row_gr)>0:
 
         ##작업 상태를 업데이트 시켜주기
         dao_ydns.update_gi(task['id'])
-
+        dao_ydns.update_gather_start(task['id'])
         #task : dictionary 타입 keyword:'', channel: '', perioda=['',''] etc
         #task 를 처리하기 위해 data util 객체를 생성합니다.
         dt = data_util.DataUtil(task)
@@ -69,6 +67,7 @@ elif len(row_gr)>0:
 
         #마무으리
         dao_ydns.update_gf(task['id'])
+        dao_ydns.update_gather_finish(task['id'])
     except Exception as e:
         print('{} is happen'.format(e))
         dao_ydns.update_er(task['id'])

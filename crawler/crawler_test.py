@@ -3,10 +3,10 @@ from crawler import naverblog
 from crawler import bigkinds
 
 #
-# bigkinds.crawl(keyword='은평 구청 홈페이지',
-#                 startDate='2017-01-01',endDate='2020-04-01', nCrawl=10000)
+# bigkinds.crawl(keyword='4차산업',
+#                 startDate='2017-01-01',endDate='2020-04-01', nCrawl=100)
 
-naverblog.crawl(keyword='메가스토어',
+naverblog.crawl(keyword='데이터바우처',
                 startDate='2020-06-01',
                 endDate='2020-06-09',
                 nCrawl = 500)

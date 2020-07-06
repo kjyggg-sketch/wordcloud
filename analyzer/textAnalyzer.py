@@ -148,13 +148,19 @@ class TextAnalyzer:
                                db=db, charset='utf8mb4')
         # 106.246.169.202
         # 192.168.0.105
+
         curs = conn.cursor(pymysql.cursors.DictCursor)
-        sql = "insert into polls_keyword_number(polls_id,keyword, category ,channel, stdate, endate, nurl, top300)" \
-              + "values (\'%s\',\'%s\',\'%s\',\'%s\', \'%s\',\'%s\', %d, \'%s\')" % \
-              (self.id, self.keyword, self.category, self.channel, self.startDate, self.endDate, self.nUrl, db_diction)
-        curs.execute(sql)
-        conn.commit()
-        conn.close()
+        sql_0 = "select * from polls_keyword_number where polls_id=\'%s\' and category=\'%s\'" % (
+        self.id, self.category)
+        curs.execute(sql_0)
+        rows = curs.fetchall()
+        if len(rows) == 0:
+            sql = "insert into polls_keyword_number(polls_id,keyword, category ,channel, stdate, endate, nurl, top300)" \
+                  + "values (\'%s\',\'%s\',\'%s\',\'%s\', \'%s\',\'%s\', %d, \'%s\')" % \
+                  (self.id, self.keyword, self.category, self.channel, self.startDate, self.endDate, self.nUrl, db_diction)
+            curs.execute(sql)
+            conn.commit()
+            conn.close()
         c.sort(key=itemgetter(1), reverse=True)
 
         self.freqWordList = []

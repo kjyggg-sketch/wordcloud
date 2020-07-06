@@ -48,6 +48,7 @@ def crawl(keyword, startDate, endDate, nCrawl=1, comment = 'bigkinds'):
     retry = 0
     limit_i = 1
     task_id = None
+    prox=None
     while n < nCrawl :
         postdata = POSTDATA.copy()
         postdata["searchKey"] = keyword
@@ -57,7 +58,13 @@ def crawl(keyword, startDate, endDate, nCrawl=1, comment = 'bigkinds'):
         postdata["resultNumber"] = NperPage
         header= CUSTOM_HEADER
         header['referer'] = URL
-        r = requests.post(URL, data=json.dumps(postdata),headers=header)
+        # proxy= {'ip': '181.118.167.104', 'port':'80'}
+        # prox = {
+        #     "http": 'http://' + proxy['ip'] + ':' + proxy['port'],
+        #     "https": 'http://' + proxy['ip'] + ':' + proxy['port']
+        # }
+        print('postdata',postdata)
+        r = requests.post(URL, data=json.dumps(postdata),headers=header,proxies=prox)
         print('engines_bigkinds_crawl_urls', keyword, i)
         print(startDate, endDate,i, 'status_code :',r.status_code)
 
@@ -98,7 +105,7 @@ def crawl(keyword, startDate, endDate, nCrawl=1, comment = 'bigkinds'):
                         category1 = r_dict["CATEGORY_NAMES"] #카테고리명
                         header_content = CUSTOM_HEADER
                         header_content['referer']=url
-                        r2 = requests.get(url, header=header_content).text
+                        r2 = requests.get(url, headers=header_content, proxies=prox).text
                         data_json = json.loads(r2)
                         r_dict2 = data_json['detail']
 
@@ -115,7 +122,7 @@ def crawl(keyword, startDate, endDate, nCrawl=1, comment = 'bigkinds'):
 
                         text = cleanse(content)
 
-                        db.insert('crawled_data',
+                        db.insert('cdata',
                                   task_id = task_id,
                                   keyword=keyword,
                                   channel=channel,
