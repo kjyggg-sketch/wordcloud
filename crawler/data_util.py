@@ -1,4 +1,5 @@
 import re
+from threading import Thread
 from crawler import naverblog
 from crawler import navernews
 from analyzer import textAnalyzer
@@ -11,6 +12,8 @@ import pymysql
 import multiprocessing
 from multiprocessing import Process, Queue, freeze_support
 from crawler import dao
+import time
+from datetime import datetime
 class DataUtil:
     def __init__(self):
         self.a_list = []
@@ -45,6 +48,253 @@ class DataUtil:
             req_proxy_list.append(proxy)
             proxy_id.append(usable_proxy['id'])
         return req_proxy_list,proxy_id
+
+    def divide_test(self,proxy_id, total_proxy_num):
+        PROXY_ID =proxy_id
+        TOTAL_PROXY_NUM = total_proxy_num
+
+        while True:
+            ##mod : task 번호를 프록시 번호로 나누었을 때 나머지
+
+            mod = PROXY_ID if PROXY_ID<TOTAL_PROXY_NUM else 0
+            ##db 연결
+            dao_ydns = dao.DAO(host='103.55.190.32', port=3306, user='wordcloud', password='word6244!@', db='crawl',
+                               charset='utf8mb4')
+
+            ##1. proxy_id 로 해당하는 proxy 가져오기
+            proxy_rows = dao_ydns.select_proxy(PROXY_ID)
+
+            ##2. 해당 프록시를 list에 담아둔다.
+            proxy_list =[]
+            for proxy in proxy_rows:
+                proxy_list.append(proxy)
+
+            ##3. 요청 들어온 작업을 확인한다. 전체 프록시 개수로 나누었을 때 나머지가 proxy_id 와 같은 요청을 모두 가져옴(전체개수 ==proxy_id 일 때 제외) .
+            real_task_rows= []
+            task_rows = dao_ydns.select_gr()
+            for row in task_rows:
+                if row['id']%TOTAL_PROXY_NUM==mod:
+                    real_task_rows.append(row)
+
+            ####해당 proxy 가 처리해야할 task 가 있는 경우
+            if len(real_task_rows)>0:
+                real_task_rows = real_task_rows[:1]
+                ### 해당 task 의 id 를 진행중으로 바꿔준다.
+                for task in real_task_rows:
+                    id =task['id']
+                    dao_ydns.update_gi(id)
+                input_data = []
+                ##7. 요청된 테스크 가져오기
+                for task in real_task_rows:
+                    task_list = self.data_process(task)
+                    input_data.append(task_list)
+                print(input_data)
+                ##8.proxy 형태 만들어주기
+                ##make_proxy
+                # input : proxy_list
+                # return : req_proxy_list
+                req_proxy_list, proxy_id = self.make_proxy(proxy_list)
+                for id in proxy_id:
+                    dao_ydns.update_N_proxy(id)
+                ##9. input_data 에 proxy 넣어주기
+                for index, task_list in enumerate(input_data):
+                    task_list[0].append(req_proxy_list[0])
+                    task_list[0].append(proxy_id[0])
+
+                    task_list[1].append(req_proxy_list[0])
+                    task_list[1].append(proxy_id[0])
+                for i in input_data:
+                    print(i)
+
+                ##10. 쓰레드 돌리기
+                threads = [None] * len(input_data) * 2
+                results = [None] * len(input_data) * 2
+
+                for index, task_list in enumerate(input_data):
+                    for jindex, input_list in enumerate(task_list):
+                        print(input_list)
+                        threads[2 * index + jindex] = Thread(target=self.to_crawl,
+                                                                args=(input_list, results, 2 * index + jindex))
+                        threads[2 * index + jindex].start()
+
+                for i in range(len(threads)):
+                    threads[i].join()
+                ##crawling end
+                # proxy status : N -> P
+                for id in proxy_id:
+                    dao_ydns.update_P_proxy(id)
+
+                # 쓰레드 결과 값(TASK ID ) 워드클라우드 생성을 위해 전달
+                for index, task_list in enumerate(input_data):
+                    for jindex, input_list in enumerate(task_list):
+                        input_list.append(results[2 * index + jindex])
+
+                # 워드클라우드 생성
+                for task_list in input_data:
+                    self.to_venndiagram_wordcloud(task_list)
+            else :
+                print('해야할작업이 없습니다. 1분간 쉽니다', '현재시각:',datetime.now())
+                time.sleep(60)
+
+        # while n<1:
+        #     if i==6:
+        #         i=0
+        #     n+=1
+        #     time.sleep(i*5)
+        #     print('i:',i)
+        #     tmp_proxy_list = []
+        #     proxy_num=6
+        #     ##db 연결
+        #     dao_ydns = dao.DAO(host='103.55.190.32', port=3306, user='wordcloud', password='word6244!@', db='crawl',
+        #                        charset='utf8mb4')
+        #
+        #     ##1. 사용가능한 프록시 갯수 확인하기 , 어떤 서버에서 가져올지 parameter 로 넘겨주기
+        #     proxy_rows = dao_ydns.select_available_proxy(server='ydns',proxy_num=proxy_num)
+        #     ##2. 사용가능한 프록시의 id를 list에 담아둔다. server_n 으로 나누었을때 나머지 i 인것 선택
+        #     for proxy in proxy_rows:
+        #         print('i','proxy["id"]',i,proxy['id'])
+        #         if proxy['id']%server_n == i:
+        #             tmp_proxy_list.append(proxy)
+        #     print(tmp_proxy_list)
+        #     ##3. 요청 들어온 작업을 확인한다. 요청은 프록시 개수보다 작거나 같음.
+        #     ##process 당 한개의 프록시 사용하기 때문에 기본 num_proxy=1
+        #     task_rows = dao_ydns.select_gr(proxy_num)
+        #     real_task_rows =[]
+        #     for index, task in enumerate(task_rows):
+        #         if task['id']%server_n == i:
+        #             print('task',task)
+        #             real_task_rows.append(task)
+        #
+        #     ##4. 다시 요청의 개수만큼 프록시 사이즈를 맞춰준다.
+        #     proxy_list = tmp_proxy_list[:len(real_task_rows)]
+        #     ####여기서 if 로 프록시 있으면 하고 없으면 하지말기로 체크하기
+        #
+        #
+        #     if len(proxy_list) > 0:
+        #         print('proxy_rows:',proxy_list)
+        #         print('real_task_rows:',real_task_rows)
+        #     print('--------------------------------------------------')
+
+
+
+
+            #     ##5. 사용하고 있는 프록시의 상태를 N 으로 변경해준다
+            #     for proxy in proxy_list:
+            #         id = proxy['id']
+            #         dao_ydns.update_N_proxy(id)
+            #
+            #     ##6. task 시작상태로 바꿔주기
+            #     for task in task_rows:
+            #         id = task['id']
+            #         dao_ydns.update_gi(id)
+            #         dao_ydns.update_gather_start(id)
+            #
+            #     ##6. input_data 만들기
+            #     input_data = []
+            #
+            #     ##7. 요청된 테스크 가져오기
+            #     for task in task_rows:
+            #         task_list = self.data_process(task)
+            #         input_data.append(task_list)
+            #
+            #     ##8.proxy 형태 만들어주기
+            #     ##make_proxy
+            #     # input : proxy_list
+            #     # return : req_proxy_list
+            #     req_proxy_list, proxy_id = self.make_proxy(proxy_list)
+            #
+            #     ##9. input_data 에 proxy 넣어주기
+            #     for index, task_list in enumerate(input_data):
+            #         task_list[0].append(req_proxy_list[index])
+            #         task_list[0].append(proxy_id[index])
+            #
+            #         task_list[1].append(req_proxy_list[index])
+            #         task_list[1].append(proxy_id[index])
+            #
+            #     # for i in input_data:
+            #     #     print(i)
+            #
+            # elif len(proxy_rows)==0:
+            #     time.sleep(60)
+            #     ##10. input 데이터를 이용해서 threading 하기
+            #     # def multiprocessing
+            #     num_process = len(proxy_list) * 2
+            #     # return num_process, input_data
+
+    def divide_process(self,i):
+        n=0
+        while n<1:
+            n+=1
+
+            tmp_proxy_list = []
+            proxy_num=1
+            ##db 연결
+            dao_ydns = dao.DAO(host='103.55.190.32', port=3306, user='wordcloud', password='word6244!@', db='crawl',
+                               charset='utf8mb4')
+
+            ##1. 사용가능한 프록시 갯수 확인하기 , 어떤 서버에서 가져올지 parameter 로 넘겨주기
+            proxy_rows = dao_ydns.select_available_proxy(server='ydns',proxy_num=proxy_num)
+            ##2. 사용가능한 프록시의 id를 list에 담아둔다.
+            for proxy in proxy_rows:
+                tmp_proxy_list.append(proxy)
+
+            ##3. 요청 들어온 작업을 확인한다. 요청은 프록시 개수보다 작거나 같음.
+            ##process 당 한개의 프록시 사용하기 때문에 기본 num_proxy=1
+            task_rows = dao_ydns.select_gr(proxy_num)
+            for task in task_rows:
+                if task['id']%6==i:
+                    task_rows
+            ##4. 다시 요청의 개수만큼 프록시 사이즈를 맞춰준다.
+            proxy_list = tmp_proxy_list[:len(task_rows)]
+            print(proxy_list)
+            ####여기서 if 로 프록시 있으면 하고 없으면 하지말기로 체크하기
+
+            print('--------------------------------------------------')
+
+            if len(proxy_rows) > 0:
+                ##5. 사용하고 있는 프록시의 상태를 N 으로 변경해준다
+                for proxy in proxy_list:
+                    id = proxy['id']
+                    dao_ydns.update_N_proxy(id)
+
+                ##6. task 시작상태로 바꿔주기
+                for task in task_rows:
+                    id = task['id']
+                    dao_ydns.update_gi(id)
+                    dao_ydns.update_gather_start(id)
+
+                ##6. input_data 만들기
+                input_data = []
+
+                ##7. 요청된 테스크 가져오기
+                for task in task_rows:
+                    task_list = self.data_process(task)
+                    input_data.append(task_list)
+
+                ##8.proxy 형태 만들어주기
+                ##make_proxy
+                # input : proxy_list
+                # return : req_proxy_list
+                req_proxy_list, proxy_id = self.make_proxy(proxy_list)
+
+                ##9. input_data 에 proxy 넣어주기
+                for index, task_list in enumerate(input_data):
+                    task_list[0].append(req_proxy_list[index])
+                    task_list[0].append(proxy_id[index])
+
+                    task_list[1].append(req_proxy_list[index])
+                    task_list[1].append(proxy_id[index])
+
+                for i in input_data:
+                    print(i)
+
+            elif len(proxy_rows)==0:
+                time.sleep(60)
+                ##10. input 데이터를 이용해서 threading 하기
+                # def multiprocessing
+                num_process = len(proxy_list) * 2
+                # return num_process, input_data
+
 
     def data_process(self,task):
 

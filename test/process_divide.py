@@ -80,6 +80,9 @@ def main() :
         return num_process, input_data
 
 if __name__ == '__main__':
+        for i in range(0,6):
+            dt = data_util.DataUtil()
+            Process(target=dt.divide_process())
 
         ##main 함수 시작
         num_process, input_data = main()
