@@ -113,6 +113,7 @@ def crawl(keyword, startDate, endDate, nCrawl, proxy ,comment="naverblog") :
                 end = True
 
         if end : break
+    db.update_one('task_log','nCrawled',num,'id',task_id)
     return task_id
 
 def get_keyhex(keyword) :

@@ -82,7 +82,11 @@ class SeleniumDriver :
 
 class Sql :
     def __init__(self, dbName, comment = "",
-                 hostIP='106.246.169.202', port=3306 ,userID='root', password='robot369', charset='utf8mb4'):
+                 hostIP='datacast-rds.crmhaqonotna.ap-northeast-2.rds.amazonaws.com',
+                 port=3306 ,
+                 userID='datacast',
+                 password='radioga12!',
+                 charset='utf8mb4'):
         self.dbName = dbName
         self.port= port
         self.hostIP = hostIP

@@ -68,7 +68,6 @@ def crawl(keyword, startDate, endDate, nCrawl, proxy=None,comment="navernews_tes
                 print(ex)
 
             if len(urls) < 10:
-                print("N of files : %d")%len(data_list)
                 print("Process will be ended")
                 end=True
 
@@ -105,10 +104,7 @@ def crawl(keyword, startDate, endDate, nCrawl, proxy=None,comment="navernews_tes
                                   title = title,
                                   text = text,
                                   author = publisher,
-                                  url = url,
-                                  etc1 = reporter,
-                                  etc2 = email,
-                                  etc3 = imageUrl
+                                  url = url
                                   )
                     except Exception as ex :
                         print(ex)
@@ -134,7 +130,7 @@ def crawl(keyword, startDate, endDate, nCrawl, proxy=None,comment="navernews_tes
 
         if end : break
         pageNo += 1
-
+    db.update_one('task_log','nCrawled',num,'id',task_id)
     return task_id
 
 def get_keyhex(keyword) :

@@ -52,7 +52,7 @@ class DAO:
         return selected_proxy_rows
 
     def select_total_proxy(self):
-        select_total_proxy = "select * from server_proxy"
+        select_total_proxy = "SELECT * FROM multi_process AS m JOIN server_proxy AS s ON m.comment=s.server WHERE m.status='IN'"
         self.curs.execute(select_total_proxy)
         total_proxy_rows = self.curs.fetchall()
         return total_proxy_rows
@@ -105,6 +105,18 @@ class DAO:
         self.curs.execute(sql_update_n_proxy)
         self.conn.commit()
         pass
+
+    def update_crawled_url_num(self,nCrawled,id):
+        sql_update_crawled_url_num = "update task_log set nCrawled=\'%s\' where id =\'%s\'"%(id)
+        self.curs.execute(sql_update_crawled_url_num)
+        self.conn.commit()
+        pass
+    def update_img_url(self,url,id):
+        update_img_url = "update polls_breakdown set img_url=\'%s\' where id=%s"%(url,id)
+        self.curs.execute(update_img_url)
+        self.conn.commit()
+        pass
+
     def update_wordcloud_path(self,base_dir,wordcloud,id):
         update_wordcloud_path = "update polls_breakdown set saved_path=\'%s\',saved_name=\'%s\' where id=%s"%('{}/source/inter'.format(base_dir),wordcloud,str(id))
         self.curs.execute(update_wordcloud_path)

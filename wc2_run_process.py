@@ -23,10 +23,10 @@ def main():
     dao_ydns = dao.DAO(host='103.55.190.32', port=3306, user='wordcloud', password='word6244!@', db='crawl',
                        charset='utf8mb4')
     ### 1. 서버명을 정해준다.
-    server = 'ydns'
+    server = 'jykim'
 
     ### 2. 서버에 해당하는 프록시 정하기
-    selected_proxy_rows = dao_ydns.select_sever_proxy(server)
+    selected_proxy_rows = dao_ydns.select_sever_proxy(server=server)
 
     ### 3. 모든 프록시 개수 가져오기
     total_proxy_rows = dao_ydns.select_total_proxy()
@@ -45,12 +45,11 @@ def main():
     # 가령 id가 5인 process 는 항상 id가 6인 process 와 처리하는 작업이 다르다.
     for proxy_id in range(min_proxy_id,max_proxy_id+1):
         dt = data_util.DataUtil()
-        process = Process(target=dt.divide_test, args=(proxy_id,total_proxy_num),)##프로세스의 고유 id(proxy_id) 와 전체 길이를 넘겨준다.
+        process = Process(target=dt.divide_process, args=(proxy_id,total_proxy_num),)##프로세스의 고유 id(proxy_id) 와 전체 길이를 넘겨준다.
         process_list.append(process)
 
     print("process시작")
     for process in process_list:
         process.start()
-
 if __name__ == '__main__':
     main()

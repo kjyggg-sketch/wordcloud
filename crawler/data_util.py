@@ -14,6 +14,8 @@ from multiprocessing import Process, Queue, freeze_support
 from crawler import dao
 import time
 from datetime import datetime
+from google.cloud import storage
+
 class DataUtil:
     def __init__(self):
         self.a_list = []
@@ -49,7 +51,7 @@ class DataUtil:
             proxy_id.append(usable_proxy['id'])
         return req_proxy_list,proxy_id
 
-    def divide_test(self,proxy_id, total_proxy_num):
+    def divide_process(self,proxy_id, total_proxy_num):
         PROXY_ID =proxy_id
         TOTAL_PROXY_NUM = total_proxy_num
 
@@ -86,9 +88,12 @@ class DataUtil:
                 input_data = []
                 ##7. 요청된 테스크 가져오기
                 for task in real_task_rows:
-                    task_list = self.data_process(task)
-                    input_data.append(task_list)
-                print(input_data)
+                    try:
+                        task_list = self.data_process(task)
+                        input_data.append(task_list)
+                    except:
+                        dao_ydns.update_er(task['id'])
+                        continue\
                 ##8.proxy 형태 만들어주기
                 ##make_proxy
                 # input : proxy_list
@@ -114,7 +119,7 @@ class DataUtil:
                     for jindex, input_list in enumerate(task_list):
                         print(input_list)
                         threads[2 * index + jindex] = Thread(target=self.to_crawl,
-                                                                args=(input_list, results, 2 * index + jindex))
+                                                                args=(input_list, results, 2 * index + jindex,req_proxy_list[0]))
                         threads[2 * index + jindex].start()
 
                 for i in range(len(threads)):
@@ -135,166 +140,6 @@ class DataUtil:
             else :
                 print('해야할작업이 없습니다. 1분간 쉽니다', '현재시각:',datetime.now())
                 time.sleep(60)
-
-        # while n<1:
-        #     if i==6:
-        #         i=0
-        #     n+=1
-        #     time.sleep(i*5)
-        #     print('i:',i)
-        #     tmp_proxy_list = []
-        #     proxy_num=6
-        #     ##db 연결
-        #     dao_ydns = dao.DAO(host='103.55.190.32', port=3306, user='wordcloud', password='word6244!@', db='crawl',
-        #                        charset='utf8mb4')
-        #
-        #     ##1. 사용가능한 프록시 갯수 확인하기 , 어떤 서버에서 가져올지 parameter 로 넘겨주기
-        #     proxy_rows = dao_ydns.select_available_proxy(server='ydns',proxy_num=proxy_num)
-        #     ##2. 사용가능한 프록시의 id를 list에 담아둔다. server_n 으로 나누었을때 나머지 i 인것 선택
-        #     for proxy in proxy_rows:
-        #         print('i','proxy["id"]',i,proxy['id'])
-        #         if proxy['id']%server_n == i:
-        #             tmp_proxy_list.append(proxy)
-        #     print(tmp_proxy_list)
-        #     ##3. 요청 들어온 작업을 확인한다. 요청은 프록시 개수보다 작거나 같음.
-        #     ##process 당 한개의 프록시 사용하기 때문에 기본 num_proxy=1
-        #     task_rows = dao_ydns.select_gr(proxy_num)
-        #     real_task_rows =[]
-        #     for index, task in enumerate(task_rows):
-        #         if task['id']%server_n == i:
-        #             print('task',task)
-        #             real_task_rows.append(task)
-        #
-        #     ##4. 다시 요청의 개수만큼 프록시 사이즈를 맞춰준다.
-        #     proxy_list = tmp_proxy_list[:len(real_task_rows)]
-        #     ####여기서 if 로 프록시 있으면 하고 없으면 하지말기로 체크하기
-        #
-        #
-        #     if len(proxy_list) > 0:
-        #         print('proxy_rows:',proxy_list)
-        #         print('real_task_rows:',real_task_rows)
-        #     print('--------------------------------------------------')
-
-
-
-
-            #     ##5. 사용하고 있는 프록시의 상태를 N 으로 변경해준다
-            #     for proxy in proxy_list:
-            #         id = proxy['id']
-            #         dao_ydns.update_N_proxy(id)
-            #
-            #     ##6. task 시작상태로 바꿔주기
-            #     for task in task_rows:
-            #         id = task['id']
-            #         dao_ydns.update_gi(id)
-            #         dao_ydns.update_gather_start(id)
-            #
-            #     ##6. input_data 만들기
-            #     input_data = []
-            #
-            #     ##7. 요청된 테스크 가져오기
-            #     for task in task_rows:
-            #         task_list = self.data_process(task)
-            #         input_data.append(task_list)
-            #
-            #     ##8.proxy 형태 만들어주기
-            #     ##make_proxy
-            #     # input : proxy_list
-            #     # return : req_proxy_list
-            #     req_proxy_list, proxy_id = self.make_proxy(proxy_list)
-            #
-            #     ##9. input_data 에 proxy 넣어주기
-            #     for index, task_list in enumerate(input_data):
-            #         task_list[0].append(req_proxy_list[index])
-            #         task_list[0].append(proxy_id[index])
-            #
-            #         task_list[1].append(req_proxy_list[index])
-            #         task_list[1].append(proxy_id[index])
-            #
-            #     # for i in input_data:
-            #     #     print(i)
-            #
-            # elif len(proxy_rows)==0:
-            #     time.sleep(60)
-            #     ##10. input 데이터를 이용해서 threading 하기
-            #     # def multiprocessing
-            #     num_process = len(proxy_list) * 2
-            #     # return num_process, input_data
-
-    def divide_process(self,i):
-        n=0
-        while n<1:
-            n+=1
-
-            tmp_proxy_list = []
-            proxy_num=1
-            ##db 연결
-            dao_ydns = dao.DAO(host='103.55.190.32', port=3306, user='wordcloud', password='word6244!@', db='crawl',
-                               charset='utf8mb4')
-
-            ##1. 사용가능한 프록시 갯수 확인하기 , 어떤 서버에서 가져올지 parameter 로 넘겨주기
-            proxy_rows = dao_ydns.select_available_proxy(server='ydns',proxy_num=proxy_num)
-            ##2. 사용가능한 프록시의 id를 list에 담아둔다.
-            for proxy in proxy_rows:
-                tmp_proxy_list.append(proxy)
-
-            ##3. 요청 들어온 작업을 확인한다. 요청은 프록시 개수보다 작거나 같음.
-            ##process 당 한개의 프록시 사용하기 때문에 기본 num_proxy=1
-            task_rows = dao_ydns.select_gr(proxy_num)
-            for task in task_rows:
-                if task['id']%6==i:
-                    task_rows
-            ##4. 다시 요청의 개수만큼 프록시 사이즈를 맞춰준다.
-            proxy_list = tmp_proxy_list[:len(task_rows)]
-            print(proxy_list)
-            ####여기서 if 로 프록시 있으면 하고 없으면 하지말기로 체크하기
-
-            print('--------------------------------------------------')
-
-            if len(proxy_rows) > 0:
-                ##5. 사용하고 있는 프록시의 상태를 N 으로 변경해준다
-                for proxy in proxy_list:
-                    id = proxy['id']
-                    dao_ydns.update_N_proxy(id)
-
-                ##6. task 시작상태로 바꿔주기
-                for task in task_rows:
-                    id = task['id']
-                    dao_ydns.update_gi(id)
-                    dao_ydns.update_gather_start(id)
-
-                ##6. input_data 만들기
-                input_data = []
-
-                ##7. 요청된 테스크 가져오기
-                for task in task_rows:
-                    task_list = self.data_process(task)
-                    input_data.append(task_list)
-
-                ##8.proxy 형태 만들어주기
-                ##make_proxy
-                # input : proxy_list
-                # return : req_proxy_list
-                req_proxy_list, proxy_id = self.make_proxy(proxy_list)
-
-                ##9. input_data 에 proxy 넣어주기
-                for index, task_list in enumerate(input_data):
-                    task_list[0].append(req_proxy_list[index])
-                    task_list[0].append(proxy_id[index])
-
-                    task_list[1].append(req_proxy_list[index])
-                    task_list[1].append(proxy_id[index])
-
-                for i in input_data:
-                    print(i)
-
-            elif len(proxy_rows)==0:
-                time.sleep(60)
-                ##10. input 데이터를 이용해서 threading 하기
-                # def multiprocessing
-                num_process = len(proxy_list) * 2
-                # return num_process, input_data
-
 
     def data_process(self,task):
 
@@ -329,6 +174,24 @@ class DataUtil:
         self.input_lsit = input_list
         return input_list
 
+    def upload_to_bucket(self, blob_name, path_to_file, bucket_name):
+        """ Upload data to a bucket"""
+
+        # Explicitly use service account credentials by specifying the private key
+        # file.
+        dir_name = "{}/source/creds/".format(self.base_dir)
+        storage_client = storage.Client.from_service_account_json(
+            dir_name + 'wordcloud_creds.json')
+        # print(buckets = list(storage_client.list_buckets())
+
+        bucket = storage_client.get_bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        blob.upload_from_filename(path_to_file)
+        blob.make_public()
+        url = blob.public_url
+        # returns a public url
+        return url
+
 
     def to_crawl(self, input_list,results, i, proxy=None):
 
@@ -337,10 +200,10 @@ class DataUtil:
         startdate = input_list[2]
         enddate = input_list[3]
         nUrl = (input_list[4])
-        print('nUrl_type:', type(nUrl))
-        print(channel)
+
         if channel == 'naverblog':
             task_id = naverblog.crawl(keyword, startdate, enddate, int(nUrl), proxy)
+
         elif channel == 'navernews':
             task_id = navernews.crawl(keyword, startdate, enddate, int(nUrl), proxy)
         else:
@@ -348,6 +211,10 @@ class DataUtil:
         results[i]= task_id
 
     def to_venndiagram_wordcloud(self,task):
+
+        dao_ydns = dao.DAO(host='103.55.190.32', port=3306, user='wordcloud', password='word6244!@', db='crawl',
+                           charset='utf8mb4')
+
         task_a = task[0]
         task_b = task[1]
 
@@ -379,14 +246,14 @@ class DataUtil:
         dict_b = analyzer_b.extractFrequentWords(500,1)
 
         #a-b , a & b , b-a
-        sc = setCalculus.setCalc(dict_a, dict_b)
-        interdict = sc.getInter()
-        differa = sc.getDiff1()
-        differb = sc.getDiff2()
-        dao_ydns  = dao.DAO(host='103.55.190.32', port=3306, user='wordcloud', password='word6244!@', db='crawl',
-                               charset='utf8mb4')
-
         try:
+
+            sc = setCalculus.setCalc(dict_a, dict_b)
+            interdict = sc.getInter()
+            differa = sc.getDiff1()
+            differb = sc.getDiff2()
+            plt.clf()
+
             ###### 벤다이어그램 ######
             #a & b
             wc5 = renderWordCloud.WordCloudRenderer(interdict, 'brg')
@@ -410,13 +277,20 @@ class DataUtil:
             plt.tight_layout()
             plt.subplots_adjust(left=0, bottom=0, right=1, top=1, hspace=0, wspace=0)
 
-            plt.savefig('{}/source/inter/{}'.format(self.base_dir,id), bbox_inces='tight', pad_inches=0, dpi=100, transparent=False)
-            plt.show()
+            img_name = str(id) + '.png'
+            img_path = '{}/source/inter/{}'.format(self.base_dir, img_name)
+
+            plt.savefig('{}/source/inter/{}'.format(self.base_dir,id), pad_inches=0, dpi=100, transparent=False)
+            plt.close()
 
             dao_ydns.update_wordcloud_path(self.base_dir,str(id)+'.png',str(id))
+            img_url = self.upload_to_bucket(img_name, img_path, 'wordcloud_ap')
+            dao_ydns.update_img_url(img_url, id)
+
             dao_ydns.update_gf(id)
             dao_ydns.update_gather_finish(id)
             dao_ydns.update_P_proxy(proxy_id)
+            print("{}완료".format(id))
 
         except Exception as e:
             print(e)

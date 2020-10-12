@@ -46,7 +46,9 @@ class TextAnalyzer:
 
     def read(self):
         table = 'cdata'
-        conn = pymysql.connect(host='106.246.169.202', user='root', password='robot369',
+        conn = pymysql.connect(host='datacast-rds.crmhaqonotna.ap-northeast-2.rds.amazonaws.com',
+                               user='datacast',
+                               password='radioga12!',
                                db='dalmaden', charset='utf8mb4')
         # 106.246.169.202
         # 192.168.0.105
